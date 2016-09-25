@@ -25,6 +25,6 @@ Vendor code search for products
 
 """,
     'data': [
-        'views/product_template.xml',
+        'views/product_product.xml',
     ],
 }

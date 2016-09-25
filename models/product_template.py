@@ -1,18 +1,31 @@
 # -*- coding: utf-8 -*-
-from openerp import models, fields, api
+from openerp.osv import osv, fields
 
 
-class ProductTemplate(models.Model):
+class ProductTemplate(osv.Model):
 
     _inherit = 'product.template'
 
-    @api.depends('seller_ids')
-    def _get_vendor_codes(self):
+    def _get_vendor_codes(self, cr, uid, ids, field_name, args, context):
+        if not context:
+            context = {}
 
-        for record in self:
-            record.vendor_codes = '\n'.join([seller.product_code for seller \
-                                             in record.seller_ids if seller.product_code]) or ''
+        res = {}
+        for product in self.browse(cr, uid, ids, context):
+            res[product.id] = '\n'.join([seller.product_code for seller in product.seller_ids if seller.product_code]) or ''
 
-    vendor_codes = fields.Char(compute='_get_vendor_codes',
-                               string='Vendor Codes',
-                               store=True)
+        return res
+
+    def _get_changed_supplierinfos(obj, cr, uid, ids, context=None):
+        ''' If supplierinfo line gets changed, recalculate the related product '''
+        res = []
+        for supplierinfo in obj.browse(cr, uid, ids):
+            res.append(supplierinfo.product_id.id)
+
+        return res
+
+    _columns = {
+        'vendor_codes': fields.function(_get_vendor_codes, type='char', string='Vendor Codes', store={
+            'product.supplierinfo': (_get_changed_supplierinfos, ["product_id", "product_code"], 10)
+        })
+    }
